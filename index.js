@@ -30,6 +30,13 @@ async function run() {
 
     const pakagesCollection = client.db('pakagesDB').collection('pakages');
 
+    // get all tour spot
+    app.get('/all-spots', async(req, res)=>{
+      const result = await pakagesCollection.find().toArray();
+      res.send(result)
+    })
+
+
     app.post('/addTour', async (req, res) => {
       const newPakages = req.body;
       console.log(newPakages);
