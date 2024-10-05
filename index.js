@@ -59,13 +59,34 @@ async function run() {
     })
 
     // save a bookings data in db
-    app.post('/booking',  async (req, res) => {
+    app.post('/booking', async (req, res) => {
       const bookingData = req.body;
       // save room booking
       const result = await bookingsCollection.insertOne(bookingData);
       res.send(result)
     })
 
+       // get all bookings for a guest
+       app.get("/my-bookings/:email",  async (req, res) => {
+        const email = req.params.email;
+        const query = { "userInfo.email": email }
+        const result = await bookingsCollection.find(query).toArray()
+        res.send(result);
+      });
+      
+
+    // update spot status
+    app.patch('/spot/status/:id', async (req, res) => {
+      const id = req.params.id;
+      const status = req.body.status
+      const query = { _id: new ObjectId(id) }
+      const updateDoc = {
+        $set: { booked: status }
+      }
+      const result = await pakagesCollection.updateOne(query, updateDoc)
+      res.send(result)
+
+    })
 
 
     app.post('/addTour', async (req, res) => {
