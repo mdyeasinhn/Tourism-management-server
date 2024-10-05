@@ -4,7 +4,7 @@ require('dotenv').config()
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
-
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY);
 // middleware
 app.use(cors());
 app.use(express.json());
@@ -29,12 +29,43 @@ async function run() {
     // await client.connect();
 
     const pakagesCollection = client.db('pakagesDB').collection('pakages');
+    const bookingsCollection = client.db('pakagesDB').collection('bookings');
 
+
+
+    app.post('/create-payment-intent', async (req, res) => {
+      const price = req.body.price;
+      const priceInCent = parseFloat(price) * 100
+      if (!price || priceInCent < 1) {
+        return res.status(400).send({ error: "Invalid price" });
+      }
+
+      // generate client secret
+      const { client_secret } = await stripe.paymentIntents.create({
+        amount: priceInCent,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+      })
+
+      // send client secret as response
+      res.send({ clientSecret: client_secret })
+    })
     // get all tour spot
-    app.get('/all-spots', async(req, res)=>{
+    app.get('/all-spots', async (req, res) => {
       const result = await pakagesCollection.find().toArray();
       res.send(result)
     })
+
+    // save a bookings data in db
+    app.post('/booking',  async (req, res) => {
+      const bookingData = req.body;
+      // save room booking
+      const result = await bookingsCollection.insertOne(bookingData);
+      res.send(result)
+    })
+
 
 
     app.post('/addTour', async (req, res) => {
@@ -43,6 +74,10 @@ async function run() {
       const result = await pakagesCollection.insertOne(newPakages);
       res.send(result)
     })
+
+
+
+
 
     app.get('/mySpot/:email', async (req, res) => {
       console.log(req.params.email)
@@ -73,12 +108,12 @@ async function run() {
 
         }
       }
-      const result  = await pakagesCollection.updateOne(quary, data);
+      const result = await pakagesCollection.updateOne(quary, data);
       res.send(result)
     })
 
-    app.delete('/delete/:id', async(req, res)=>{
-      const result = await pakagesCollection.deleteOne({_id: new ObjectId(req.params.id)})
+    app.delete('/delete/:id', async (req, res) => {
+      const result = await pakagesCollection.deleteOne({ _id: new ObjectId(req.params.id) })
       console.log(result);
       res.send(result)
     })
